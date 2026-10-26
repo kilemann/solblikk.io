@@ -1,0 +1,11 @@
+{
+  "name": "solblikk",
+  "version": "0.1.0",
+  "description": "Solblikk – solbane i kart og live kamera (PWA for Android)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "license": "MIT"
+}

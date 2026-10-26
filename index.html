@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Solblikk</title>
+  <meta name="description" content="Se solbanen for en valgt dato i kart og gjennom kameraet.">
+  <meta name="theme-color" content="#101A2E">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Solblikk</h1>
+    <div class="datebar">
+      <button class="icon-btn" id="prevDay" aria-label="Forrige dag">‹</button>
+      <label class="date-field">
+        <span id="dateLabel">–</span>
+        <input type="date" id="dateInput" aria-label="Velg dato">
+      </label>
+      <button class="icon-btn" id="nextDay" aria-label="Neste dag">›</button>
+      <button class="chip" id="todayBtn">I dag</button>
+    </div>
+  </header>
+
+  <main id="views">
+    <section id="mapView" class="view active" aria-label="Kart">
+      <div id="map"></div>
+      <div class="map-tools">
+        <button class="fab" id="locateBtn" aria-label="Bruk min posisjon" title="Bruk min posisjon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="7.5" fill="none"/></svg>
+        </button>
+        <button class="fab" id="landmarkBtn" aria-label="Velg kalibreringspunkt" title="Velg kalibreringspunkt">
+          <svg viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><path d="M12 7v6M9 10h6"/></svg>
+        </button>
+      </div>
+      <p class="map-hint" id="mapHint">Hold inne i kartet for å flytte punktet.</p>
+    </section>
+
+    <section id="cameraView" class="view" aria-label="Kamera">
+      <video id="video" playsinline muted autoplay></video>
+      <canvas id="overlay"></canvas>
+      <div class="hud">
+        <div class="hud-read" id="hudRead">–</div>
+        <div class="hud-warn" id="hudWarn" hidden></div>
+      </div>
+      <button class="calib-btn" id="calibBtn">Kalibrer kompass</button>
+      <div class="cam-msg" id="camMsg" hidden></div>
+    </section>
+  </main>
+
+  <section class="sheet" id="sheet" aria-label="Soldata">
+    <button class="sheet-handle" id="sheetHandle" aria-label="Vis eller skjul detaljer"><span></span></button>
+    <div class="slider-row">
+      <input type="range" id="timeSlider" min="0" max="1435" step="5" aria-label="Klokkeslett">
+      <output id="timeOut">12:00</output>
+    </div>
+    <p class="sun-now" id="sunNow">–</p>
+    <div class="sheet-body">
+      <table class="times" id="timesTable">
+        <thead><tr><th></th><th>Oppgang</th><th>Nedgang</th></tr></thead>
+        <tbody>
+          <tr id="rowTerrain"><th>Terreng</th><td id="tRiseT">–</td><td id="tSetT">–</td></tr>
+          <tr><th>Flat horisont</th><td id="tRiseF">–</td><td id="tSetF">–</td></tr>
+          <tr><th>Retning</th><td id="tRiseAz">–</td><td id="tSetAz">–</td></tr>
+        </tbody>
+      </table>
+      <dl class="facts">
+        <div><dt>Direkte sol</dt><dd id="fSunHours">–</dd></div>
+        <div><dt>Høyest kl.</dt><dd id="fNoon">–</dd></div>
+        <div><dt>Maks høyde</dt><dd id="fMaxAlt">–</dd></div>
+      </dl>
+      <p class="status" id="posStatus">–</p>
+      <p class="status" id="hzStatus">–</p>
+      <p class="legend">
+        <span class="lg lg-day">Valgt dato</span>
+        <span class="lg lg-summer">21. juni</span>
+        <span class="lg lg-winter">21. des.</span>
+        <span class="lg lg-terrain">Terreng</span>
+      </p>
+      <p class="version">Solblikk <span id="version"></span> · Kart og høydedata © <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a></p>
+    </div>
+  </section>
+
+  <nav class="tabs" aria-label="Visning">
+    <button class="tab active" data-view="mapView">
+      <svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Kart
+    </button>
+    <button class="tab" data-view="cameraView">
+      <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2.5h6L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Kamera
+    </button>
+  </nav>
+
+  <dialog id="calibDialog">
+    <form method="dialog" class="dlg">
+      <h2>Kalibrer kompass</h2>
+      <p class="dlg-text">Hold telefonen oppreist og sett krysset midt på skjermen på målet. Trykk så på målet under. Det retter opp både misvisning og sensorfeil.</p>
+      <button type="button" class="dlg-btn" id="calSun">Sola står i krysset</button>
+      <p class="dlg-note" id="calSunNote"></p>
+      <button type="button" class="dlg-btn" id="calLandmark">Kalibreringspunktet står i krysset</button>
+      <p class="dlg-note" id="calLmNote"></p>
+      <label class="dlg-slider">
+        <span>Kameraets synsfelt <output id="fovOut">65°</output></span>
+        <input type="range" id="fovSlider" min="40" max="100" step="1">
+      </label>
+      <p class="dlg-note">Juster til timeperlene og horisontlinjen følger landskapet når du snur deg.</p>
+      <div class="dlg-row">
+        <button type="button" class="dlg-link" id="calReset">Nullstill kalibrering</button>
+        <button class="dlg-btn primary" value="close">Ferdig</button>
+      </div>
+      <p class="dlg-warn">Ikke se direkte på sola. Sikt via skjermen.</p>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
