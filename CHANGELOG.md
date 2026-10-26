@@ -2,6 +2,14 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.1.1] – 2026-10-26
+
+### Endret
+- Nytt app-ikon: kamera med sola i linsen og solbanen som prikket bue over.
+
+### Lagt til
+- Tester som sjekker at PNG-ikonene har størrelsen manifestet oppgir.
+
 ## [0.1.0] – 2026-10-26
 
 Første versjon. Bygget med testdrevet utvikling (55+ automatiske tester, `npm test`).

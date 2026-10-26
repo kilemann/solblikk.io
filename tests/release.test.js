@@ -24,3 +24,19 @@ test('manifestet peker på eksisterende ikoner', () => {
   const man = JSON.parse(read('manifest.webmanifest'));
   for (const i of man.icons) assert.ok(existsSync(new URL(i.src, root)), `mangler ${i.src}`);
 });
+
+test('PNG-ikonene har størrelsen manifestet oppgir', () => {
+  const man = JSON.parse(read('manifest.webmanifest'));
+  for (const i of man.icons.filter((x) => x.type === 'image/png')) {
+    const buf = readFileSync(new URL(i.src, root));
+    assert.equal(buf.toString('ascii', 1, 4), 'PNG', `${i.src} er ikke PNG`);
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+    assert.equal(`${w}x${h}`, i.sizes, i.src);
+  }
+});
+
+test('SVG-ikonet viser kamera og sol', () => {
+  const svg = read('icons/icon.svg');
+  assert.match(svg, /id="kamera"/);
+  assert.match(svg, /id="sol"/);
+});

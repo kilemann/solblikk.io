@@ -1,7 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="112" fill="#101A2E"/>
-  <path d="M64 352 L176 264 L232 304 L320 216 L448 330 L448 448 L64 448 Z" fill="#1B2A47"/>
-  <path d="M72 352 Q256 40 440 352" fill="none" stroke="#FFC233" stroke-width="18" stroke-linecap="round" stroke-dasharray="1 44"/>
-  <circle cx="300" cy="170" r="54" fill="#FFC233"/>
-  <path d="M64 352 L176 264 L232 304 L320 216 L448 330" fill="none" stroke="#6FCF97" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Solbane med timeperler over kameraet -->
+  <path d="M58 262 Q256 -30 454 262" fill="none" stroke="#FFC233" stroke-width="15" stroke-linecap="round" stroke-dasharray="0 40"/>
+  <g id="kamera">
+    <path d="M196 196 L214 156 Q218 148 228 148 L284 148 Q294 148 298 156 L316 196 Z" fill="#E9EEF7"/>
+    <rect x="92" y="190" width="328" height="226" rx="46" fill="#1B2A47" stroke="#E9EEF7" stroke-width="18"/>
+    <circle cx="256" cy="304" r="82" fill="#101A2E" stroke="#E9EEF7" stroke-width="18"/>
+    <circle cx="372" cy="236" r="11" fill="#6FCF97"/>
+  </g>
+  <g id="sol" stroke="#FFC233" stroke-width="9" stroke-linecap="round">
+    <circle cx="256" cy="304" r="34" fill="#FFC233" stroke="none"/>
+    <path d="M256 250v-12M256 358v12M202 304h-12M310 304h12M218 266l-8-8M294 342l8 8M218 342l-8 8M294 266l8-8"/>
+  </g>
 </svg>
