@@ -1,7 +1,7 @@
 // Solblikk – kartmodus (Leaflet + leaflet-rotate + Kartverket topo)
 import { pathSegments, polarPoint, rayPoint } from './mapgeo.js';
-import { horizonAt } from './horizon.js';
 import { eventLabel } from './format.js';
+import { createRotationGate } from './rotation.js';
 
 const TOPO_URL = 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
 const COLORS = { sun: '#FFC233', summer: '#FF8A5B', winter: '#7FB7FF', terrain: '#6FCF97', text: '#E9EEF7', grey: '#9AA8C2' };
@@ -29,10 +29,33 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
   const canRotate = typeof map.setBearing === 'function' && typeof map.getBearing === 'function';
   if (!canRotate && compassBtn) compassBtn.hidden = true;
 
+  // Dødsone: leaflet-rotate roterer fra første grad, også når du bare kniper for å zoome.
+  // Vi fanger opp kursen gesten ber om og slipper den først gjennom etter 15° vridning.
+  if (canRotate) {
+    const gate = createRotationGate({ threshold: 15 });
+    const rawSet = map.setBearing.bind(map);
+    map.setBearing = (b, o) => rawSet(gate.filter(b), o);
+    el.addEventListener('touchstart', (e) => {
+      if (e.touches?.length === 2 && !gate.active) gate.start(map.getBearing());
+    }, { capture: true, passive: true });
+    const stop = (e) => { if (!e.touches || e.touches.length < 2) gate.end(); };
+    el.addEventListener('touchend', stop, { capture: true, passive: true });
+    el.addEventListener('touchcancel', stop, { capture: true, passive: true });
+  }
+
   L.tileLayer(TOPO_URL, {
     maxZoom: 18, attribution: '© <a href="https://www.kartverket.no/">Kartverket</a>',
   }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+  // Egne kartlag over markørlaget (600): sola (640) og opp/ned-tidene (660).
+  // Leaflet-rotate overstyrer zIndexOffset, så rekkefølgen styres med lag i stedet.
+  const parent = map.getPane?.('norotatePane');
+  for (const [name, z] of [['solblikkSol', 640], ['solblikkTider', 660]]) {
+    const pane = map.createPane ? map.createPane(name, parent) : null;
+    if (pane) pane.style.zIndex = String(z);
+  }
+  const hasPanes = !!map.getPane?.('solblikkTider');
 
   const layer = L.layerGroup().addTo(map);
   let last = null;
@@ -74,8 +97,9 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
     return map.distance([lat, lon], map.containerPointToLatLng([c.x + px, c.y]));
   }
 
-  const label = (latlng, cls, text) => L.marker(latlng, {
-    interactive: false, keyboard: false,
+  // Lagrekkefølge: timetall (markørlaget) < sol < opp/ned-tider
+  const label = (latlng, cls, text, pane) => L.marker(latlng, {
+    interactive: false, keyboard: false, ...(pane && hasPanes ? { pane } : {}),
     icon: L.divIcon({ className: '', html: `<span class="${cls}">${text}</span>`, iconSize: [0, 0] }),
   }).addTo(layer);
 
@@ -91,18 +115,9 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
       L.polyline(ring, { color: '#14191f', weight: alt === 0 ? 1.5 : 0.8, opacity: alt === 0 ? 0.7 : 0.35, dashArray: alt ? '2 6' : null, interactive: false }).addTo(layer);
     }
 
-    // Terreng
-    if (d.horizon) {
-      const poly = [];
-      for (let az = 0; az <= 360; az += 2) poly.push(polarPoint(lat, lon, az, Math.max(0, horizonAt(d.horizon, az)), R));
-      L.polygon(poly, { color: '#2E9E5E', weight: 2, fillColor: COLORS.terrain, fillOpacity: 0.12, interactive: false }).addTo(layer);
-    }
-
-    // Solverv (stiplet)
-    for (const [path, color] of [[d.summerPath, COLORS.summer], [d.winterPath, '#4F8FE0']]) {
-      for (const seg of pathSegments(path, lat, lon, R)) {
-        L.polyline(seg, { color, weight: 2, dashArray: '6 6', opacity: 0.9, interactive: false }).addTo(layer);
-      }
+    // Vintersolverv (stiplet). Sommersolverv og terrengflaten vises bare i kameraet.
+    for (const seg of pathSegments(d.winterPath, lat, lon, R)) {
+      L.polyline(seg, { color: '#4F8FE0', weight: 2, dashArray: '6 6', opacity: 0.9, interactive: false }).addTo(layer);
     }
 
     // Valgt dato
@@ -116,7 +131,7 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
     for (const [e, prefix] of [[ev.sunrise ?? ev.flatSunrise, 'Opp'], [ev.sunset ?? ev.flatSunset, 'Ned']]) {
       if (!e) continue;
       L.polyline([[lat, lon], rayPoint(lat, lon, e.azimuth, R * 1.12)], { color: '#E0A800', weight: 2.5, opacity: 0.95, interactive: false }).addTo(layer);
-      label(rayPoint(lat, lon, e.azimuth, R * 1.2), 'event-label', eventLabel(prefix, e.time));
+      label(rayPoint(lat, lon, e.azimuth, R * 1.2), 'event-label', eventLabel(prefix, e.time), 'solblikkTider');
     }
 
     // Timeperler (bare timer)
@@ -145,7 +160,7 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
       const at = polarPoint(lat, lon, s.azimuth, Math.max(s.apparentAltitude, 0), R);
       L.polyline([[lat, lon], at], { color: '#E0A800', weight: 1.5, dashArray: '3 5', interactive: false }).addTo(layer);
       L.marker(at, {
-        interactive: false, keyboard: false, zIndexOffset: 1000,
+        interactive: false, keyboard: false, ...(hasPanes ? { pane: 'solblikkSol' } : {}),
         icon: L.divIcon({ className: '', html: `<span class="sun-icon">${sunSvg(s.visible ? COLORS.sun : COLORS.grey)}</span>`, iconSize: [0, 0] }),
       }).addTo(layer);
     }

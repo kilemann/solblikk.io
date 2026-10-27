@@ -164,6 +164,17 @@ export function sunEvents(day, lat, lon, opts = {}) {
   const firstRise = (x) => x.list.find((c) => c.rising);
   const lastSet = (x) => [...x.list].reverse().find((c) => !c.rising);
 
+  // Soloppgang/-nedgang over terreng: korte glimt gjennom smale skar (under minPeriod)
+  // skal ikke flytte tidspunktet. De teller fortsatt med i soltimene.
+  const minPeriod = (opts.minPeriodMin ?? 10) * MS_MIN;
+  const dayStart = start.getTime(), dayEnd = end.getTime();
+  const realRise = periods.filter((p) => p.start.getTime() > dayStart);
+  const realSet = periods.filter((p) => p.end.getTime() < dayEnd);
+  const longRise = realRise.find((p) => p.end - p.start >= minPeriod);
+  const longSet = [...realSet].reverse().find((p) => p.end - p.start >= minPeriod);
+  const terrRise = opts.horizon ? (longRise ? { t: longRise.start.getTime() } : firstRise(terr)) : firstRise(terr);
+  const terrSet = opts.horizon ? (longSet ? { t: longSet.end.getTime() } : lastSet(terr)) : lastSet(terr);
+
   let type;
   if (!flat.anyAbove) type = 'polar-night';
   else if (!terr.anyAbove) type = 'no-sun';
@@ -175,8 +186,8 @@ export function sunEvents(day, lat, lon, opts = {}) {
 
   return {
     type,
-    sunrise: event(firstRise(terr)),
-    sunset: event(lastSet(terr)),
+    sunrise: event(terrRise),
+    sunset: event(terrSet),
     flatSunrise: event(firstRise(flat)),
     flatSunset: event(lastSet(flat)),
     periods,

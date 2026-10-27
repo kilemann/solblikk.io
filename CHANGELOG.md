@@ -2,6 +2,16 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.2.1] – 2026-10-27
+
+### Endret
+- Rolig kartrotasjon: kartet roterer først når fingrene har vridd seg mer enn 15°, og starter da mykt uten hopp. Vanlig knipezoom roterer ikke lenger kartet.
+- Opp- og nedgangstidene ligger nå foran timetallene og sola på kartet.
+- Kartet viser ikke lenger sommersolverv (rød stiplet) eller terrengflaten (grønn). Begge vises fortsatt i kameraet.
+
+### Rettet
+- Soloppgang og solnedgang over terreng kunne hoppe til feil tidspunkt når sola bare tittet fram noen minutter gjennom et smalt skar. Glimt under 10 minutter flytter ikke lenger tidspunktene, men teller fortsatt med i timer med direkte sol.
+
 ## [0.2.0] – 2026-10-27
 
 ### Lagt til

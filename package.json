@@ -1,6 +1,6 @@
 {
   "name": "solblikk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Solblikk – solbane i kart og live kamera (PWA for Android)",
   "type": "module",
   "private": true,

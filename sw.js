@@ -1,5 +1,5 @@
 // Solblikk service worker – app-skall offline, kartfliser hurtiglagret.
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const SHELL = `solblikk-shell-${VERSION}`;
 const TILES = 'solblikk-tiles';
 const MAX_TILES = 1500;
@@ -7,7 +7,7 @@ const MAX_TILES = 1500;
 const SHELL_FILES = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png',
   'js/app.js', 'js/version.js', 'js/sun.js', 'js/horizon.js', 'js/projection.js', 'js/format.js',
-  'js/mapgeo.js', 'js/map-view.js', 'js/camera-view.js',
+  'js/mapgeo.js', 'js/map-view.js', 'js/camera-view.js', 'js/rotation.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet-rotate@0.5.0/dist/leaflet-rotate.js',
