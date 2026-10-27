@@ -27,3 +27,30 @@ export function fromDateInput(s) {
 }
 
 export const fmtDeg = (v, digits = 0) => `${v.toFixed(digits).replace('.', ',')}°`;
+
+// ---------- v0.2.0 ----------
+export const daysInYear = (y) => ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 366 : 365);
+
+export const monthLengths = (y) => [31, daysInYear(y) === 366 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** Dag i året (1 = 1. januar), uavhengig av sommertid. */
+export function dayOfYear(d) {
+  return Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 1)) / 86400000) + 1;
+}
+
+/** Lokal midnatt for dag nr. n i året (klemmes til 1 … årets lengde). */
+export function dateFromDayOfYear(y, n) {
+  const d = Math.max(1, Math.min(daysInYear(y), Math.round(n)));
+  return new Date(y, 0, d);
+}
+
+/** «Opp 04:57» – opp- og nedgang vises med minutter. */
+export const eventLabel = (prefix, time) => (time ? `${prefix} ${fmtTime(time)}` : null);
+
+/** Kort, énlinjes beskrivelse av sola på valgt klokkeslett. */
+export function sunNowText(s, visible) {
+  if (s.apparentAltitude < -0.83) {
+    return `Sola under horisonten (${fmtDeg(s.altitude, 1).replace('-', '−')}), ${compassName(s.azimuth)} ${Math.round(s.azimuth)}°`;
+  }
+  return `Sola i ${compassName(s.azimuth)} ${Math.round(s.azimuth)}°, ${fmtDeg(s.apparentAltitude, 1)} over horisonten${visible ? '' : ', bak terrenget'}`;
+}

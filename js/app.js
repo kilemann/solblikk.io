@@ -2,7 +2,10 @@
 import { VERSION } from './version.js';
 import { dayPath, sunEvents, solarPosition } from './sun.js';
 import { fetchHorizon, horizonAt, horizonCacheKey, bearingBetween, distanceBetween } from './horizon.js';
-import { fmtTime, fmtDuration, compassName, fmtDateShort, toDateInput, fromDateInput, fmtDeg } from './format.js';
+import {
+  fmtTime, fmtDuration, compassName, fmtDateShort, toDateInput, fromDateInput, fmtDeg,
+  dayOfYear, dateFromDayOfYear, daysInYear, monthLengths, sunNowText,
+} from './format.js';
 import { createMapView } from './map-view.js';
 import { createCameraView } from './camera-view.js';
 
@@ -28,6 +31,15 @@ const settings = Object.assign({ headingOffset: 0, calibrated: false, longFov: 6
 const saveSettings = () => store.set('settings', settings);
 
 let data = null;
+let solsticeCache = { key: '', summer: null, winter: null };
+
+function solstices(y, lat, lon) {
+  const key = `${y}:${lat.toFixed(5)},${lon.toFixed(5)}`;
+  if (solsticeCache.key !== key) {
+    solsticeCache = { key, summer: dayPath(new Date(y, 5, 21), lat, lon, 10), winter: dayPath(new Date(y, 11, 21), lat, lon, 10) };
+  }
+  return solsticeCache;
+}
 
 function compute() {
   const { lat, lon } = state.pos;
@@ -39,8 +51,8 @@ function compute() {
     pos: state.pos,
     horizon: state.horizon,
     path: dayPath(state.date, lat, lon, 5),
-    summerPath: dayPath(new Date(y, 5, 21), lat, lon, 10),
-    winterPath: dayPath(new Date(y, 11, 21), lat, lon, 10),
+    summerPath: solstices(y, lat, lon).summer,
+    winterPath: solstices(y, lat, lon).winter,
     events: sunEvents(state.date, lat, lon, { horizon: hz }),
     sunAt: { ...sp, time: t, visible: sp.apparentAltitude + 0.27 > horizonAt(state.horizon, sp.azimuth) },
     landmark: state.landmark,
@@ -58,9 +70,8 @@ function renderSheet() {
   $('timeOut').textContent = fmtTime(d.sunAt.time);
 
   const s = d.sunAt;
-  $('sunNow').textContent = s.apparentAltitude < -0.83
-    ? `Sola er under horisonten (${fmtDeg(s.altitude, 1)}) i ${compassName(s.azimuth)} ${Math.round(s.azimuth)}°.`
-    : `Sola står i ${compassName(s.azimuth)} ${Math.round(s.azimuth)}°, ${fmtDeg(s.apparentAltitude, 1)} over horisonten${s.visible ? '.' : ', men bak terrenget.'}`;
+  $('sunNow').textContent = sunNowText(s, s.visible);
+  renderDaySlider();
 
   const hasT = !!state.horizon;
   $('rowTerrain').hidden = !hasT;
@@ -84,6 +95,29 @@ function renderSheet() {
   const hz = $('hzStatus');
   hz.textContent = state.hzStatus.text;
   hz.classList.toggle('warn', state.hzStatus.kind === 'error');
+}
+
+// ---------- Dagsglider ----------
+let monthsYear = null;
+function renderDaySlider() {
+  const y = state.date.getFullYear();
+  const sl = $('daySlider');
+  sl.max = daysInYear(y);
+  sl.value = dayOfYear(state.date);
+  if (monthsYear !== y) {
+    monthsYear = y;
+    const lens = monthLengths(y);
+    const m = $('months');
+    m.style.gridTemplateColumns = lens.map((n) => `${n}fr`).join(' ');
+    m.innerHTML = 'JFMAMJJASOND'.split('').map((c) => `<span>${c}</span>`).join('');
+  }
+}
+
+// Glideren tegner på nytt maks én gang per skjermbilde, så den føles rask.
+let pending = 0;
+function scheduleCompute() {
+  if (pending) return;
+  pending = requestAnimationFrame(() => { pending = 0; compute(); });
 }
 
 // ---------- Terreng ----------
@@ -156,6 +190,8 @@ function locate(center = true) {
 
 // ---------- Visninger ----------
 const mapView = createMapView($('map'), {
+  compassBtn: $('compassBtn'),
+  compassNeedle: $('compassNeedle'),
   onLongPress: (lat, lon) => setPosition(lat, lon, 'kart'),
   onTap: (lat, lon) => {
     if (!state.pickLandmark) return;
@@ -178,7 +214,7 @@ function setPickLandmark(on) {
   hint.classList.toggle('active', on);
   hint.textContent = on
     ? 'Trykk på et tydelig landemerke, f.eks. en fjelltopp, et tårn eller en kirke.'
-    : 'Hold inne i kartet for å flytte punktet.';
+    : 'Hold inne for å flytte punktet.';
 }
 
 function showView(id) {
@@ -198,7 +234,11 @@ new ResizeObserver(() => {
   document.documentElement.style.setProperty('--sheet-h', `${hpx}px`);
   mapView.invalidate();
 }).observe($('sheet'));
-$('timeSlider').addEventListener('input', (e) => { state.minutes = +e.target.value; compute(); });
+$('timeSlider').addEventListener('input', (e) => { state.minutes = +e.target.value; scheduleCompute(); });
+$('daySlider').addEventListener('input', (e) => {
+  state.date = dateFromDayOfYear(state.date.getFullYear(), +e.target.value);
+  scheduleCompute();
+});
 $('dateInput').addEventListener('change', (e) => { if (e.target.value) { state.date = fromDateInput(e.target.value); compute(); } });
 const shiftDay = (n) => { state.date = new Date(state.date.getFullYear(), state.date.getMonth(), state.date.getDate() + n); compute(); };
 $('prevDay').addEventListener('click', () => shiftDay(-1));

@@ -17,15 +17,21 @@
 </head>
 <body>
   <header class="topbar">
-    <h1 class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Solblikk</h1>
-    <div class="datebar">
-      <button class="icon-btn" id="prevDay" aria-label="Forrige dag">‹</button>
-      <label class="date-field">
-        <span id="dateLabel">–</span>
-        <input type="date" id="dateInput" aria-label="Velg dato">
-      </label>
-      <button class="icon-btn" id="nextDay" aria-label="Neste dag">›</button>
-      <button class="chip" id="todayBtn">I dag</button>
+    <div class="toprow">
+      <h1 class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Solblikk</h1>
+      <div class="datebar">
+        <button class="icon-btn" id="prevDay" aria-label="Forrige dag">‹</button>
+        <label class="date-field">
+          <span id="dateLabel">–</span>
+          <input type="date" id="dateInput" aria-label="Velg dato">
+        </label>
+        <button class="icon-btn" id="nextDay" aria-label="Neste dag">›</button>
+        <button class="chip" id="todayBtn">I dag</button>
+      </div>
+    </div>
+    <div class="dayslider">
+      <input type="range" id="daySlider" min="1" max="365" step="1" aria-label="Dag i året">
+      <div class="months" id="months" aria-hidden="true"></div>
     </div>
   </header>
 
@@ -33,6 +39,9 @@
     <section id="mapView" class="view active" aria-label="Kart">
       <div id="map"></div>
       <div class="map-tools">
+        <button class="fab compass" id="compassBtn" aria-label="Pek kartet mot nord" title="Pek kartet mot nord">
+          <svg viewBox="0 0 28 28" id="compassNeedle"><path d="M14 3l4.5 11h-9z" fill="#FF6B6B" stroke="none"/><path d="M14 25l-4.5-11h9z" fill="#E9EEF7" stroke="none"/></svg>
+        </button>
         <button class="fab" id="locateBtn" aria-label="Bruk min posisjon" title="Bruk min posisjon">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="7.5" fill="none"/></svg>
         </button>
@@ -40,7 +49,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><path d="M12 7v6M9 10h6"/></svg>
         </button>
       </div>
-      <p class="map-hint" id="mapHint">Hold inne i kartet for å flytte punktet.</p>
+      <p class="map-hint" id="mapHint">Hold inne for å flytte punktet.</p>
     </section>
 
     <section id="cameraView" class="view" aria-label="Kamera">
@@ -119,6 +128,7 @@
   </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-rotate@0.5.0/dist/leaflet-rotate.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

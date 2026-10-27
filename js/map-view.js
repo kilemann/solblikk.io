@@ -1,17 +1,34 @@
-// Solblikk – kartmodus (Leaflet + Kartverket topo)
+// Solblikk – kartmodus (Leaflet + leaflet-rotate + Kartverket topo)
 import { pathSegments, polarPoint, rayPoint } from './mapgeo.js';
 import { horizonAt } from './horizon.js';
+import { eventLabel } from './format.js';
 
 const TOPO_URL = 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
-const COLORS = { sun: '#FFC233', summer: '#FF8A5B', winter: '#7FB7FF', terrain: '#6FCF97', text: '#E9EEF7' };
+const COLORS = { sun: '#FFC233', summer: '#FF8A5B', winter: '#7FB7FF', terrain: '#6FCF97', text: '#E9EEF7', grey: '#9AA8C2' };
 
-export function createMapView(el, { onLongPress, onTap }) {
+const sunSvg = (fill) => {
+  const rays = Array.from({ length: 8 }, (_, i) => {
+    const a = i * Math.PI / 4, c = Math.cos(a), s = Math.sin(a);
+    return `<line x1="${20 + 12 * c}" y1="${20 + 12 * s}" x2="${20 + 18 * c}" y2="${20 + 18 * s}"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 40 40"><g stroke="#101A2E" stroke-width="5" stroke-linecap="round">${rays}</g>`
+    + `<g stroke="${fill}" stroke-width="2.6" stroke-linecap="round">${rays}</g>`
+    + `<circle cx="20" cy="20" r="9.5" fill="${fill}" stroke="#101A2E" stroke-width="3"/></svg>`;
+};
+
+export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedle }) {
   const L = globalThis.L;
   if (!L) {
     el.innerHTML = '<p style="padding:16px">Kartbiblioteket kunne ikke lastes. Sjekk nettforbindelsen og last siden på nytt.</p>';
     return { update() {}, invalidate() {}, center() {} };
   }
-  const map = L.map(el, { zoomControl: false, attributionControl: true }).setView([58.1467, 7.9956], 14);
+  const map = L.map(el, {
+    zoomControl: false, attributionControl: true,
+    rotate: true, touchRotate: true, shiftKeyRotate: true, rotateControl: false, bearing: 0,
+  }).setView([58.1467, 7.9956], 14);
+  const canRotate = typeof map.setBearing === 'function' && typeof map.getBearing === 'function';
+  if (!canRotate && compassBtn) compassBtn.hidden = true;
+
   L.tileLayer(TOPO_URL, {
     maxZoom: 18, attribution: '© <a href="https://www.kartverket.no/">Kartverket</a>',
   }).addTo(map);
@@ -24,13 +41,43 @@ export function createMapView(el, { onLongPress, onTap }) {
   map.on('click', (e) => onTap?.(e.latlng.lat, e.latlng.lng));
   map.on('zoomend', () => last && draw(last));
 
-  /** Diagramradius: ~42 % av korteste side av kartet, i meter. */
+  // ---------- Kompass ----------
+  // Nåla peker dit nord er på skjermen. Retningen leses fra kartet selv (to punkter i
+  // samme lengdegrad), så den blir riktig uansett hvordan rotasjonen er implementert.
+  let shownAngle = null;
+  function northAngle() {
+    const c = map.getCenter();
+    const a = map.latLngToContainerPoint(c);
+    const b = map.latLngToContainerPoint([c.lat + 0.01, c.lng]);
+    return Math.atan2(b.x - a.x, a.y - b.y) * 180 / Math.PI;   // 0 = opp, med klokka
+  }
+  function updateCompass() {
+    if (!compassNeedle) return;
+    const ang = Math.round(northAngle() * 10) / 10;
+    if (ang === shownAngle) return;
+    shownAngle = ang;
+    compassNeedle.style.transform = `rotate(${ang}deg)`;
+    compassBtn?.classList.toggle('rotated', Math.abs(ang) > 0.5);
+  }
+  map.on('rotate move zoom viewreset resize', updateCompass);
+  el.addEventListener('touchend', () => requestAnimationFrame(updateCompass));
+  compassBtn?.addEventListener('click', () => {
+    if (canRotate) map.setBearing(0);
+    requestAnimationFrame(updateCompass);
+  });
+
+  /** Diagramradius: ~38 % av korteste side av kartet, i meter. */
   function radiusMeters(lat, lon) {
     const size = map.getSize();
-    const px = Math.min(size.x, size.y) * 0.42;
+    const px = Math.min(size.x, size.y) * 0.34;
     const c = map.latLngToContainerPoint([lat, lon]);
     return map.distance([lat, lon], map.containerPointToLatLng([c.x + px, c.y]));
   }
+
+  const label = (latlng, cls, text) => L.marker(latlng, {
+    interactive: false, keyboard: false,
+    icon: L.divIcon({ className: '', html: `<span class="${cls}">${text}</span>`, iconSize: [0, 0] }),
+  }).addTo(layer);
 
   function draw(d) {
     layer.clearLayers();
@@ -41,25 +88,18 @@ export function createMapView(el, { onLongPress, onTap }) {
     for (const alt of [0, 30, 60]) {
       const ring = [];
       for (let az = 0; az <= 360; az += 5) ring.push(polarPoint(lat, lon, az, alt, R));
-      L.polyline(ring, { color: COLORS.text, weight: alt === 0 ? 1.5 : 0.8, opacity: alt === 0 ? 0.7 : 0.35, dashArray: alt ? '2 6' : null, interactive: false }).addTo(layer);
-    }
-    // Himmelretninger
-    for (const [az, name] of [[0, 'N'], [90, 'Ø'], [180, 'S'], [270, 'V']]) {
-      L.marker(polarPoint(lat, lon, az, -6, R), {
-        interactive: false,
-        icon: L.divIcon({ className: '', html: `<span class="hour-label" style="background:#E9EEF7">${name}</span>`, iconSize: [0, 0] }),
-      }).addTo(layer);
+      L.polyline(ring, { color: '#14191f', weight: alt === 0 ? 1.5 : 0.8, opacity: alt === 0 ? 0.7 : 0.35, dashArray: alt ? '2 6' : null, interactive: false }).addTo(layer);
     }
 
-    // Terreng: horisontvinkel som polygon (sola innenfor = synlig)
+    // Terreng
     if (d.horizon) {
       const poly = [];
       for (let az = 0; az <= 360; az += 2) poly.push(polarPoint(lat, lon, az, Math.max(0, horizonAt(d.horizon, az)), R));
-      L.polygon(poly, { color: COLORS.terrain, weight: 2, fillColor: COLORS.terrain, fillOpacity: 0.08, interactive: false }).addTo(layer);
+      L.polygon(poly, { color: '#2E9E5E', weight: 2, fillColor: COLORS.terrain, fillOpacity: 0.12, interactive: false }).addTo(layer);
     }
 
     // Solverv (stiplet)
-    for (const [path, color] of [[d.summerPath, COLORS.summer], [d.winterPath, COLORS.winter]]) {
+    for (const [path, color] of [[d.summerPath, COLORS.summer], [d.winterPath, '#4F8FE0']]) {
       for (const seg of pathSegments(path, lat, lon, R)) {
         L.polyline(seg, { color, weight: 2, dashArray: '6 6', opacity: 0.9, interactive: false }).addTo(layer);
       }
@@ -70,29 +110,24 @@ export function createMapView(el, { onLongPress, onTap }) {
       L.polyline(seg, { color: '#000', weight: 7, opacity: 0.25, interactive: false }).addTo(layer);
       L.polyline(seg, { color: COLORS.sun, weight: 4, interactive: false }).addTo(layer);
     }
-    // Timeperler
+
+    // Opp-/nedgang: stråle og etikett med minutter
+    const ev = d.events;
+    for (const [e, prefix] of [[ev.sunrise ?? ev.flatSunrise, 'Opp'], [ev.sunset ?? ev.flatSunset, 'Ned']]) {
+      if (!e) continue;
+      L.polyline([[lat, lon], rayPoint(lat, lon, e.azimuth, R * 1.12)], { color: '#E0A800', weight: 2.5, opacity: 0.95, interactive: false }).addTo(layer);
+      label(rayPoint(lat, lon, e.azimuth, R * 1.2), 'event-label', eventLabel(prefix, e.time));
+    }
+
+    // Timeperler (bare timer)
     for (const p of d.path) {
       if (p.altitude < 0 || p.time.getMinutes() !== 0) continue;
-      L.marker(polarPoint(lat, lon, p.azimuth, p.altitude, R), {
-        interactive: false,
-        icon: L.divIcon({ className: '', html: `<span class="hour-label">${String(p.time.getHours()).padStart(2, '0')}</span>`, iconSize: [0, 0] }),
-      }).addTo(layer);
+      label(polarPoint(lat, lon, p.azimuth, p.altitude, R), 'hour-label', String(p.time.getHours()).padStart(2, '0'));
     }
 
-    // Oppgang/nedgang-stråler (terreng hvis tilgjengelig)
-    const ev = d.events;
-    for (const e of [ev.sunrise, ev.sunset]) {
-      if (!e) continue;
-      L.polyline([[lat, lon], rayPoint(lat, lon, e.azimuth, R * 1.15)], { color: COLORS.sun, weight: 2.5, opacity: 0.9, interactive: false }).addTo(layer);
-    }
-
-    // Sola på valgt klokkeslett
-    const s = d.sunAt;
-    if (s.altitude > -6) {
-      L.polyline([[lat, lon], rayPoint(lat, lon, s.azimuth, R)], { color: COLORS.sun, weight: 1.5, dashArray: '3 5', interactive: false }).addTo(layer);
-      L.circleMarker(polarPoint(lat, lon, s.azimuth, Math.max(s.altitude, 0), R), {
-        radius: 11, color: '#101A2E', weight: 3, fillColor: s.visible ? COLORS.sun : '#5b6a86', fillOpacity: 1, interactive: false,
-      }).addTo(layer);
+    // Himmelretninger
+    for (const [az, name] of [[0, 'N'], [90, 'Ø'], [180, 'S'], [270, 'V']]) {
+      label(polarPoint(lat, lon, az, -9, R), 'dir-label', name);
     }
 
     // Kalibreringspunkt
@@ -103,6 +138,18 @@ export function createMapView(el, { onLongPress, onTap }) {
 
     // Posisjon
     L.marker([lat, lon], { interactive: false, icon: L.divIcon({ className: '', html: '<div class="pos-marker"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(layer);
+
+    // Sola på valgt klokkeslett (følger tidsglideren). Grå når den står bak terrenget.
+    const s = d.sunAt;
+    if (s.apparentAltitude > -0.83) {
+      const at = polarPoint(lat, lon, s.azimuth, Math.max(s.apparentAltitude, 0), R);
+      L.polyline([[lat, lon], at], { color: '#E0A800', weight: 1.5, dashArray: '3 5', interactive: false }).addTo(layer);
+      L.marker(at, {
+        interactive: false, keyboard: false, zIndexOffset: 1000,
+        icon: L.divIcon({ className: '', html: `<span class="sun-icon">${sunSvg(s.visible ? COLORS.sun : COLORS.grey)}</span>`, iconSize: [0, 0] }),
+      }).addTo(layer);
+    }
+    updateCompass();
   }
 
   return {

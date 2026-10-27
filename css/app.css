@@ -13,7 +13,7 @@
   --radius-s: 8px;
   --radius-l: 18px;
   --tabs-h: 60px;
-  --top-h: 56px;
+  --top-h: 108px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   font-family: 'Barlow', system-ui, sans-serif;
   color-scheme: dark;
@@ -31,16 +31,24 @@ body {
 }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.brand svg, button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Toppfelt */
 .topbar {
   position: fixed; inset: 0 0 auto 0; height: var(--top-h); z-index: 1000;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: env(safe-area-inset-top, 0px) 12px 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: env(safe-area-inset-top, 0px) 12px 4px;
   background: rgba(16, 26, 46, .92); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
+.toprow { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 48px; }
+.dayslider { padding: 0 2px; }
+.dayslider input { display: block; width: 100%; margin: 0; height: 28px; }
+/* Månedsfeltene er like brede som månedene er lange, så de står under riktig del av glideren.
+   Sporet starter og slutter en halv tommelbredde inn (ca. 8 px). */
+.months { display: grid; margin: -2px 8px 0; font-family: 'Barlow Semi Condensed', sans-serif; font-size: 11px; line-height: 13px; color: var(--muted); }
+.months span { border-left: 1px solid var(--line); text-align: center; }
+.months span:first-child { border-left: 0; }
 .brand { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .01em; }
 .brand svg { stroke: var(--sun); }
 .brand svg circle { fill: var(--sun); }
@@ -84,6 +92,19 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .map-hint.active { color: var(--night); background: var(--sun); border-color: var(--sun); }
 .pos-marker { width: 18px; height: 18px; border-radius: 50%; background: var(--text); border: 3px solid var(--night); box-shadow: 0 0 0 2px var(--text); }
 .lm-marker { width: 16px; height: 16px; transform: rotate(45deg); background: var(--terrain); border: 2px solid var(--night); }
+.compass svg { width: 28px; height: 28px; transition: transform .15s linear; }
+.dir-label {
+  font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 17px; line-height: 1;
+  color: var(--night); background: var(--text); border-radius: 5px; padding: 4px 7px;
+  white-space: nowrap; transform: translate(-50%, -50%); display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+.event-label {
+  font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 15px; line-height: 1;
+  color: var(--night); background: var(--sun); border-radius: 5px; padding: 4px 6px;
+  white-space: nowrap; transform: translate(-50%, -50%); display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+.sun-icon { transform: translate(-50%, -50%); display: block; width: 40px; height: 40px; }
+.sun-icon svg { width: 40px; height: 40px; }
 .hour-label {
   font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 12px;
   color: var(--night); background: var(--sun); border-radius: 4px; padding: 0 3px;
@@ -127,7 +148,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
   font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; color: var(--sun);
 }
 input[type=range] { flex: 1; accent-color: var(--sun); height: 32px; }
-.sun-now { margin: 2px 0 6px; color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.sun-now { margin: 2px 0 6px; color: var(--muted); font-size: 13.5px; line-height: 19px; height: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .times { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 4px; }
 .times th, .times td { padding: 5px 0; text-align: right; }
 .times thead th { font-size: 13px; color: var(--muted); font-weight: 500; }

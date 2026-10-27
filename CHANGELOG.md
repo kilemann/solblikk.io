@@ -2,6 +2,23 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.2.0] – 2026-10-27
+
+### Lagt til
+- Dagsglider under logo og dato som går over hele skjermbredden, med månedsfelt som er like brede som månedene er lange. Pilene flytter fortsatt én dag om gangen.
+- Kartet kan roteres med to fingre (leaflet-rotate). Ny kompassknapp viser hvor nord er og retter kartet mot nord ved trykk.
+- Liten sol på kartet som følger tidsglideren. Den blir grå når den står bak terrenget.
+- Etiketter med klokkeslett for soloppgang og solnedgang på kartet, med minutter (f.eks. «Opp 04:57»).
+
+### Endret
+- Større N-, Ø-, S- og V-merker på kartet.
+- Teksten under tidsglideren er kortere, mindre og alltid på én linje, så arket ikke endrer høyde.
+- Solvervbanene lagres mellom tegninger, så glidere og datoskifte går raskere.
+- Solbanediagrammet på kartet er litt mindre, så opp- og nedgangsmerkene får plass.
+
+### Rettet
+- Solbaner, ringer og terreng ble ikke tegnet på kartet. En generell CSS-regel for knappeikoner krympet Leaflets tegneflate til 22 px. Regelen gjelder nå bare egne ikoner.
+
 ## [0.1.1] – 2026-10-26
 
 ### Endret
