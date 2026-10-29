@@ -29,3 +29,22 @@ export function pathSegments(path, lat, lon, radiusM, minAlt = 0) {
   }
   return segs;
 }
+
+// ---------- Zoom ----------
+/** Kartverkets topo-fliser hentes til og med dette nivået, deretter forstørres de. */
+export const TILE_MAX_NATIVE_ZOOM = 18;
+/** Høyeste zoom: gir målestokk på 5 m eller mindre i hele Norge. */
+export const MAP_MAX_ZOOM = 20;
+
+/** Meter per skjermpiksel i Web Mercator. */
+export function metersPerPixel(lat, zoom) {
+  return 156543.03392 * Math.cos(lat * Math.PI / 180) / 2 ** zoom;
+}
+
+/** Lengden Leaflets målestokk viser (maks 100 px, avrundet ned til 1/2/3/5 × 10ⁿ). */
+export function scaleBarMeters(mPerPx, maxWidth = 100) {
+  const max = mPerPx * maxWidth;
+  const pow10 = 10 ** Math.floor(Math.log10(max));
+  const d = max / pow10;
+  return pow10 * (d >= 10 ? 10 : d >= 5 ? 5 : d >= 3 ? 3 : d >= 2 ? 2 : 1);
+}

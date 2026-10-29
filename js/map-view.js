@@ -1,5 +1,5 @@
 // Solblikk – kartmodus (Leaflet + leaflet-rotate + Kartverket topo)
-import { pathSegments, polarPoint, rayPoint } from './mapgeo.js';
+import { pathSegments, polarPoint, rayPoint, MAP_MAX_ZOOM, TILE_MAX_NATIVE_ZOOM } from './mapgeo.js';
 import { eventLabel } from './format.js';
 import { createRotationGate } from './rotation.js';
 
@@ -23,7 +23,7 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
     return { update() {}, invalidate() {}, center() {} };
   }
   const map = L.map(el, {
-    zoomControl: false, attributionControl: true,
+    zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM,
     rotate: true, touchRotate: true, shiftKeyRotate: true, rotateControl: false, bearing: 0,
   }).setView([58.1467, 7.9956], 14);
   const canRotate = typeof map.setBearing === 'function' && typeof map.getBearing === 'function';
@@ -44,7 +44,7 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
   }
 
   L.tileLayer(TOPO_URL, {
-    maxZoom: 18, attribution: '© <a href="https://www.kartverket.no/">Kartverket</a>',
+    maxZoom: MAP_MAX_ZOOM, maxNativeZoom: TILE_MAX_NATIVE_ZOOM, attribution: '© <a href="https://www.kartverket.no/">Kartverket</a>',
   }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
 

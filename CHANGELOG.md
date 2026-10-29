@@ -2,6 +2,11 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.2.2] – 2026-10-29
+
+### Endret
+- Kartet kan zoomes helt inn til målestokk 5 m (zoom 20, før 18). Kartverkets fliser hentes fortsatt på nivå 18 og forstørres de siste to nivåene, så kartet blir noe uskarpt helt innerst, men solbanediagrammet er skarpt. Ingen ekstra nedlasting ved innzooming.
+
 ## [0.2.1] – 2026-10-27
 
 ### Endret
