@@ -14,16 +14,22 @@ export function createCameraView({ video, canvas, hudRead, hudWarn, camMsg, getD
   let R = null;                 // glattet rotasjonsmatrise
   let sensor = 'none';          // 'absolute' | 'manual' | 'none'
   let running = false, raf = 0, stream = null, sensorTimer = 0;
+  let session = 0;              // øker ved hver start/stopp, så en sen kamerastart kan oppdages
+  let msgKind = null;           // 'compass' | 'camera' | null
   let manual = { alpha: 0, beta: 90 };   // brukes uten kompass (f.eks. PC)
 
+  const compassArrived = () => {
+    sensor = 'absolute';
+    if (msgKind === 'compass') hideMsg();
+  };
   const onAbs = (e) => {
     if (e.alpha == null) return;
-    sensor = 'absolute';
+    compassArrived();
     R = smoothMatrix(R, rotationMatrix(e.alpha, e.beta, e.gamma), 0.25);
   };
   const onRel = (e) => {
     if (e.absolute && e.alpha != null && sensor !== 'absolute') {
-      sensor = 'absolute';
+      compassArrived();
       R = smoothMatrix(R, rotationMatrix(e.alpha, e.beta, e.gamma), 0.25);
     }
   };
@@ -53,36 +59,43 @@ export function createCameraView({ video, canvas, hudRead, hudWarn, camMsg, getD
   }
 
   async function startCamera() {
-    camMsg.hidden = true;
+    const mine = session;
+    if (msgKind === 'camera') hideMsg();
     if (!navigator.mediaDevices?.getUserMedia) {
-      showMsg('Kameraet er ikke tilgjengelig i denne nettleseren. Overlegget vises uten kamerabilde.');
+      showMsg('Kameraet er ikke tilgjengelig i denne nettleseren. Overlegget vises uten kamerabilde.', 'camera');
       return;
     }
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
+      const s = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false,
       });
+      // Har brukeren forlatt kamerafanen mens kameraet startet, slås det av igjen med en gang.
+      if (mine !== session || !running) { s.getTracks().forEach((t) => t.stop()); return; }
+      stream = s;
       video.srcObject = stream;
       await video.play().catch(() => {});
     } catch (err) {
+      if (mine !== session || !running) return;
       showMsg(err?.name === 'NotAllowedError'
         ? 'Kameratilgang er avslått. Gi Solblikk tilgang til kamera i nettleserens innstillinger for nettstedet.'
-        : `Kameraet kunne ikke startes (${err?.name ?? 'ukjent feil'}). Overlegget vises uten kamerabilde.`);
+        : `Kameraet kunne ikke startes (${err?.name ?? 'ukjent feil'}). Overlegget vises uten kamerabilde.`, 'camera');
     }
   }
 
-  function showMsg(text) { camMsg.textContent = text; camMsg.hidden = false; }
+  function showMsg(text, kind) { camMsg.textContent = text; camMsg.hidden = false; msgKind = kind; }
+  function hideMsg() { camMsg.hidden = true; msgKind = null; }
 
   function start() {
     if (running) return;
     running = true;
+    session++;
     window.addEventListener('deviceorientationabsolute', onAbs);
     window.addEventListener('deviceorientation', onRel);
     clearTimeout(sensorTimer);
     sensorTimer = setTimeout(() => {
       if (sensor !== 'absolute') {
         sensor = 'manual';
-        showMsg('Fant ingen kompassdata. Dra i bildet for å se deg rundt.');
+        showMsg('Fant ingen kompassdata. Dra i bildet for å se deg rundt.', 'compass');
       }
     }, 1500);
     startCamera();
@@ -91,12 +104,14 @@ export function createCameraView({ video, canvas, hudRead, hudWarn, camMsg, getD
 
   function stop() {
     running = false;
+    session++;
     cancelAnimationFrame(raf);
     clearTimeout(sensorTimer);
     window.removeEventListener('deviceorientationabsolute', onAbs);
     window.removeEventListener('deviceorientation', onRel);
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
+    video.srcObject = null;
   }
 
   /** Kamerakurs uten kalibrering – grunnlaget for ny kalibrering. */

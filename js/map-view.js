@@ -58,11 +58,12 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
   const hasPanes = !!map.getPane?.('solblikkTider');
 
   const layer = L.layerGroup().addTo(map);
+  const sunLayer = L.layerGroup().addTo(map);
   let last = null;
 
   map.on('contextmenu', (e) => onLongPress?.(e.latlng.lat, e.latlng.lng));
   map.on('click', (e) => onTap?.(e.latlng.lat, e.latlng.lng));
-  map.on('zoomend', () => last && draw(last));
+  map.on('zoomend', () => last && (draw(last), drawSun(last)));
 
   // ---------- Kompass ----------
   // Nåla peker dit nord er på skjermen. Retningen leses fra kartet selv (to punkter i
@@ -154,22 +155,37 @@ export function createMapView(el, { onLongPress, onTap, compassBtn, compassNeedl
     // Posisjon
     L.marker([lat, lon], { interactive: false, icon: L.divIcon({ className: '', html: '<div class="pos-marker"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(layer);
 
+    updateCompass();
+  }
+
+  /** Bare sola og strålen mot den – det eneste som endres når tidsglideren flyttes. */
+  function drawSun(d) {
+    sunLayer.clearLayers();
+    const { lat, lon } = d.pos;
+    const R = radiusMeters(lat, lon);
     // Sola på valgt klokkeslett (følger tidsglideren). Grå når den står bak terrenget.
     const s = d.sunAt;
     if (s.apparentAltitude > -0.83) {
       const at = polarPoint(lat, lon, s.azimuth, Math.max(s.apparentAltitude, 0), R);
-      L.polyline([[lat, lon], at], { color: '#E0A800', weight: 1.5, dashArray: '3 5', interactive: false }).addTo(layer);
+      L.polyline([[lat, lon], at], { color: '#E0A800', weight: 1.5, dashArray: '3 5', interactive: false }).addTo(sunLayer);
       L.marker(at, {
         interactive: false, keyboard: false, ...(hasPanes ? { pane: 'solblikkSol' } : {}),
         icon: L.divIcon({ className: '', html: `<span class="sun-icon">${sunSvg(s.visible ? COLORS.sun : COLORS.grey)}</span>`, iconSize: [0, 0] }),
-      }).addTo(layer);
+      }).addTo(sunLayer);
     }
-    updateCompass();
   }
 
+  // Er alt unntatt klokkeslettet likt som sist, tegnes bare sola på nytt.
+  const sameDay = (a, b) => a && b && a.pos === b.pos && a.path === b.path && a.events === b.events
+    && a.winterPath === b.winterPath && a.landmark === b.landmark && a.horizon === b.horizon;
+
   return {
-    update(d) { last = d; draw(d); },
-    invalidate() { map.invalidateSize(); if (last) draw(last); },
+    update(d) {
+      if (!sameDay(last, d)) draw(d);
+      last = d;
+      drawSun(d);
+    },
+    invalidate() { map.invalidateSize(); if (last) { draw(last); drawSun(last); } },
     center(lat, lon) { map.setView([lat, lon], Math.max(map.getZoom(), 14)); },
   };
 }

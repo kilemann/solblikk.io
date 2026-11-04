@@ -79,7 +79,7 @@ export function parseElevations(json) {
 export async function fetchHorizon(lat, lon, opts = {}) {
   const {
     fetchFn = globalThis.fetch.bind(globalThis), azStep = 3, concurrency = 4,
-    onProgress = () => {}, eye = 1.6, signal,
+    onProgress = () => {}, eye = 1.6, signal, retryDelays = [500, 1500],
   } = opts;
   const dists = SAMPLE_DISTANCES;
   const pts = buildHorizonPoints(lat, lon, azStep, dists);
@@ -88,14 +88,34 @@ export async function fetchHorizon(lat, lon, opts = {}) {
   const z = new Array(pts.length);
   let done = 0, next = 0;
 
+  // Én forespørsel med nye forsøk ved nettfeil eller serverfeil (5xx/429) – nyttig på ustabil mobildekning.
+  const wait = (ms) => new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Avbrutt', 'AbortError')); }, { once: true });
+  });
+  const fetchBatch = async (url) => {
+    for (let attempt = 0; ; attempt++) {
+      let res = null, err = null;
+      try { res = await fetchFn(url, { signal }); } catch (e) {
+        if (e?.name === 'AbortError' || signal?.aborted) throw e;
+        err = e;                                                   // nettfeil: prøv igjen
+      }
+      if (res?.ok) return parseElevations(await res.json());
+      if (res) {
+        err = new Error(`Høyde-API svarte med HTTP ${res.status}`);
+        if (res.status < 500 && res.status !== 429) throw err;     // 4xx: ingen vits å prøve igjen
+      }
+      if (attempt >= retryDelays.length) throw err;
+      await wait(retryDelays[attempt]);
+    }
+  };
+
   const worker = async () => {
     while (next < batches.length) {
       const b = next++;
       const coords = batches[b].map(([x, y]) => [+x.toFixed(6), +y.toFixed(6)]);
       const url = `${API_URL}?koordsys=4326&geojson=false&punkter=${encodeURIComponent(JSON.stringify(coords))}`;
-      const res = await fetchFn(url, { signal });
-      if (!res.ok) throw new Error(`Høyde-API svarte med HTTP ${res.status}`);
-      const vals = parseElevations(await res.json());
+      const vals = await fetchBatch(url);
       vals.forEach((v, i) => { z[b * BATCH + i] = v; });
       done++;
       onProgress(done / batches.length);

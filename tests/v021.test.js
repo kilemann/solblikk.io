@@ -93,7 +93,7 @@ test('rotasjon: utenfor gest slippes verdien rett gjennom (kompassknappen)', () 
 function fakeLeaflet() {
   const added = [];
   const layer = (kind, args) => {
-    const l = { kind, args, addTo() { added.push(this); return this; } };
+    const l = { kind, args, addTo(t) { this.target = t; added.push(this); return this; } };
     return l;
   };
   const handlers = {};
@@ -113,7 +113,7 @@ function fakeLeaflet() {
   const L = {
     map: () => map,
     tileLayer: (...a) => layer('tile', a), control: { scale: (...a) => layer('scale', a) },
-    layerGroup: () => ({ addTo() { return this; }, clearLayers() { added.length = 0; } }),
+    layerGroup: () => ({ addTo() { return this; }, clearLayers() { for (let i = added.length - 1; i >= 0; i--) if (added[i].target === this) added.splice(i, 1); } }),
     polyline: (...a) => layer('polyline', a), polygon: (...a) => layer('polygon', a),
     marker: (...a) => layer('marker', a), circleMarker: (...a) => layer('circle', a),
     divIcon: (o) => o,

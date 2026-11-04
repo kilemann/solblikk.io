@@ -2,6 +2,21 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.2.3] – 2026-11-04
+
+Rettelser etter kodegjennomgang.
+
+### Rettet
+- Kartfliser ble aldri lagret for bruk uten nett. Service workeren ber nå om flisene med CORS, så de kan lagres. Tillater ikke Kartverket det, hentes de som før (kartet virker, men lagres ikke).
+- Kameraet kunne bli stående på i bakgrunnen hvis du byttet til Kart mens det startet.
+- «Fant ingen kompassdata» ble stående selv om kompasset kom i gang litt senere.
+- Tidsglideren viste en time feil de to dagene i året klokka stilles.
+- Appen kunne bli blank rett etter en oppdatering hvis nettleseren blandet nye og gamle filer. Appfilene sjekkes nå alltid mot serveren.
+
+### Endret
+- Tidsglideren går raskere på kartet: bare sola tegnes på nytt når klokkeslettet endres, og dagens bane og opp/ned regnes ikke ut på nytt.
+- Terrenghentingen prøver hver forespørsel inntil tre ganger ved nettfeil eller serverfeil før den gir opp.
+
 ## [0.2.2] – 2026-10-29
 
 ### Endret

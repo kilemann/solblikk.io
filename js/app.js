@@ -4,7 +4,7 @@ import { dayPath, sunEvents, solarPosition } from './sun.js';
 import { fetchHorizon, horizonAt, horizonCacheKey, bearingBetween, distanceBetween } from './horizon.js';
 import {
   fmtTime, fmtDuration, compassName, fmtDateShort, toDateInput, fromDateInput, fmtDeg,
-  dayOfYear, dateFromDayOfYear, daysInYear, monthLengths, sunNowText,
+  dayOfYear, dateFromDayOfYear, daysInYear, monthLengths, sunNowText, timeOnDate,
 } from './format.js';
 import { createMapView } from './map-view.js';
 import { createCameraView } from './camera-view.js';
@@ -41,19 +41,35 @@ function solstices(y, lat, lon) {
   return solsticeCache;
 }
 
+// Dagens bane og opp/ned regnes bare ut på nytt når dato, sted eller terreng endres –
+// ikke når bare klokkeslettet flyttes. Da tegner kartet bare sola på nytt.
+let dayCache = { date: 0, pos: null, horizon: undefined, path: null, events: null };
+function dayData(lat, lon) {
+  const c = dayCache;
+  if (c.date !== state.date.getTime() || c.pos !== state.pos || c.horizon !== state.horizon) {
+    const hz = state.horizon ? (az) => horizonAt(state.horizon, az) : undefined;
+    dayCache = {
+      date: state.date.getTime(), pos: state.pos, horizon: state.horizon,
+      path: dayPath(state.date, lat, lon, 5),
+      events: sunEvents(state.date, lat, lon, { horizon: hz }),
+    };
+  }
+  return dayCache;
+}
+
 function compute() {
   const { lat, lon } = state.pos;
-  const hz = state.horizon ? (az) => horizonAt(state.horizon, az) : undefined;
   const y = state.date.getFullYear();
-  const t = new Date(state.date.getTime() + state.minutes * 60000);
+  const t = timeOnDate(state.date, state.minutes);
   const sp = solarPosition(t, lat, lon);
+  const dd = dayData(lat, lon);
   data = {
     pos: state.pos,
     horizon: state.horizon,
-    path: dayPath(state.date, lat, lon, 5),
+    path: dd.path,
     summerPath: solstices(y, lat, lon).summer,
     winterPath: solstices(y, lat, lon).winter,
-    events: sunEvents(state.date, lat, lon, { horizon: hz }),
+    events: dd.events,
     sunAt: { ...sp, time: t, visible: sp.apparentAltitude + 0.27 > horizonAt(state.horizon, sp.azimuth) },
     landmark: state.landmark,
     landmarkBearing: state.landmark ? bearingBetween(lat, lon, state.landmark.lat, state.landmark.lon) : null,

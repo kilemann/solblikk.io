@@ -54,3 +54,8 @@ export function sunNowText(s, visible) {
   }
   return `Sola i ${compassName(s.azimuth)} ${Math.round(s.azimuth)}°, ${fmtDeg(s.apparentAltitude, 1)} over horisonten${visible ? '' : ', bak terrenget'}`;
 }
+
+/** Klokkeslett på en lokal dato ut fra minutter etter midnatt på klokka (riktig også når klokka stilles). */
+export function timeOnDate(day, minutes) {
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), Math.floor(minutes / 60), minutes % 60);
+}
