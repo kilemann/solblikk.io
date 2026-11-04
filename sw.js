@@ -1,5 +1,5 @@
 // Solblikk service worker – app-skall offline, kartfliser lagret for bruk uten nett.
-const VERSION = '0.2.3';
+const VERSION = '0.3.0';
 const SHELL = `solblikk-shell-${VERSION}`;
 const TILES = 'solblikk-tiles';
 const MAX_TILES = 1500;

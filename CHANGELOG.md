@@ -2,6 +2,11 @@
 
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og versjoneringen følger [semantisk versjonering](https://semver.org/lang/no/).
 
+## [0.3.0] – 2026-11-04
+
+### Lagt til
+- Navn, versjon og info-knapp (i) øverst til venstre, som i de andre appene. Info-vinduet har bruksanvisning for kart, kamera og kalibrering, og versjonsliste.
+
 ## [0.2.3] – 2026-11-04
 
 Rettelser etter kodegjennomgang.

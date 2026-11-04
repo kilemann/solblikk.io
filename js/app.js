@@ -294,6 +294,7 @@ $('fovSlider').addEventListener('input', (e) => { settings.longFov = +e.target.v
 
 // ---------- Oppstart ----------
 $('version').textContent = `v${VERSION}`;
+$('versionTop').textContent = `v${VERSION}`;
 mapView.center(state.pos.lat, state.pos.lon);
 loadHorizon();
 locate(true);
